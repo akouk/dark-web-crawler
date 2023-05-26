@@ -1,4 +1,5 @@
 import re
+from html_manager import add_http_prefix_in_the_onion_address
 
 class PageScrapper:
     def __init__(self, html):
@@ -19,7 +20,8 @@ class PageScrapper:
 
             with open(file_name, 'w') as f:
                 for onion_address in onion_addresses:
-                    f.write(f'http://{onion_address}' + '\n')
+                    address_link = add_http_prefix_in_the_onion_address(onion_address)
+                    f.write(address_link + '\n')
 
             print(f'All the unique onion addresses are written to the file {file_name}')
         else:

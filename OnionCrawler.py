@@ -1,6 +1,6 @@
 import requests
-import random
-import string
+from PageCrawler import Pagecrawler
+
 
 class OnionCrawler:
     def __init__(self, url, proxies):
@@ -11,11 +11,22 @@ class OnionCrawler:
         session = requests.session()
         session.proxies = self.proxies
         return session
-
+        
     def search(self):
         session = self.get_tor_session()
         print('Getting url:', self.url)
-        result = session.get(self.url, timeout=30).text
-        file_name = ''.join(random.choice(string.ascii_lowercase) for i in range(16))
-        with open(f'{file_name}.txt', 'w+', encoding='utf-8') as new_thing:
-            new_thing.write(result)
+        pagecrawler = Pagecrawler(self.url)  # Create an instance of Pagecrawler
+        headers = pagecrawler.headers  # Get random headers
+
+        try:
+            response = session.get(self.url, headers=headers, timeout=30)
+            response.raise_for_status()  # Raise exception if request was not successful
+            print('Request went through.\n')
+            result = response.text
+            return result
+        except requests.exceptions.ConnectionError as e:
+            print(f"Connection error for {self.url}: {e}")
+            return None
+        except requests.exceptions.HTTPError as e:
+            print(f"HTTP error occurred: {e}")
+            return None

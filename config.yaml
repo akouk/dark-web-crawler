@@ -1,0 +1,19 @@
+project_directory: '/home/user/Desktop/dwc'
+project_name: 'mysearchengine22222'
+
+results_data_name: 'crawling_results'
+
+base_urls:
+  - 'https://ahmia.fi/search/q=comic+book'
+  - 'https://ahmia.fi/search/q=credit+card'
+  - 'https://ahmia.fi/search/q=index+of'
+  # Add more base URLs here
+
+urls_to_crawl_file: 'links_to_crawl.txt'
+crawled_urls_file: 'crawled_links.txt'
+
+num_worker_threads: 2
+
+proxies:
+  http: 'socks5h://127.0.0.1:9050'
+  https: 'socks5h://127.0.0.1:9050'

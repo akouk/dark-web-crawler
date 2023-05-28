@@ -1,6 +1,7 @@
 import threading
 from queue import Queue
-from crawlers import PageCrawler, OnionCrawler
+from OnionCrawler import OnionCrawler
+from PageCrawler import PageCrawler
 from CrawlerState import CrawlerState
 from file_manager import *
 from config_reader import *

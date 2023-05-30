@@ -1,96 +1,79 @@
+import yaml
+import time
 import threading
 from queue import Empty
 from typing import Dict, List
 
-
-from configs import reader
 from utils.log_config import logger
 from crawlers import state, page, onion
+from config_types import ConfigDict
 
 
-def main():
-    config_file_path = './configs/config.yaml'
-    config = reader.read_config_file(config_file_path)
-    (
-        project_directory,
-        project_name,
-        base_urls,
-        num_worker_threads,
-        proxies
-    ) = reader.get_config_values(config)
+def main(config_file_path: str) -> None:
+    with open(config_file_path, "r") as file:
+        config: ConfigDict = yaml.safe_load(file)
 
-    # Yaml links
     state_crawlers = state.CrawlerState(
-        project_name, project_directory, base_urls)
-    logger.info('Base urls: %s', state_crawlers.crawl_queue.queue)
+        project_name=config["project"]["name"],
+        project_directory=config["project"]["directory"],
+        base_urls=config["base_urls"],
+    )
+    logger.info("Base urls: %s", state_crawlers.crawl_queue.queue)
 
-    create_crawler_threads(num_worker_threads, state_crawlers, proxies)
-    #start_crawling(state_crawlers)
+    create_crawler_threads(
+        num_worker_threads=config["num_worker_threads"],
+        state=state_crawlers,
+        proxies=config["proxies"],
+        timeout=config["request"]["timeout"],
+    )
 
 
-def create_crawler_threads(num_worker_threads, state, proxies):
+def create_crawler_threads(num_worker_threads: int, state: state.CrawlerState, proxies: Dict[str, str], timeout: int) -> None:
     logger.debug("CREATING CRAWLER THREADS")
     active_threads: List[threading.Thread] = []
+
     for _ in range(num_worker_threads):
-        thread = threading.Thread(target=crawl_worker, args=(state, proxies))
+        thread = threading.Thread(target=crawl_worker, args=(state, proxies, timeout))
         thread.start()
         active_threads.append(thread)
+
     for thread in active_threads:
         thread.join()
+
     logger.debug("CRAWLER THREADS CREATED")
 
 
+def crawl_worker(state: state.CrawlerState, proxies: Dict[str, str], timeout: int) -> None:
+    logger.info("STARTING CRAWL WORKER")
+    try:
+        while True:
+            logger.info("INSIDE WHILE TRUE")
+            url = state.crawl_queue.get(block=False)
 
-def crawl_worker(state: state.CrawlerState, proxies: Dict[str, str]):
-    logger.info('STRATING CRAWL WORKER')
+            logger.info(f"URL GET FROM QUEUE {url}")
+            #logger.info(f"Active entries in queue: {state.crawl_queue.queue}")
 
-    while True:
-        logger.info('INSIDE WHILE TRUE')
-        url = state.crawl_queue.get(block=False)
+            # Check if the URL has been crawled
+            if url in state.crawled_domains:
+                logger.info(f"URL {url} has already been crawled.")
+                time.sleep(0.1)
+                continue
 
-        logger.info(f'URL GET FROM QUEUE {url}')
-        logger.info(f'Active entries in queue: {state.crawl_queue.queue}')
+            logger.info(f"Start the crawler for url {url}")
 
-        # Check if the URL has been crawled
-        if url not in state.crawled_domains:
-            logger.info(f'URL {url} NOT IN CRAWLED')
-
-            if ".onion" in url:
-                logger.debug("ONION LINK FOUND")
-                logger.info("Creating OnionCrawler")
-                crawler = onion.OnionCrawler(state, proxies=proxies)
-
-            else:
-                logger.debug("REGULAR LINK FOUND")
-                logger.info("Creating PageCrawler")
-                crawler = page.PageCrawler(state)
+            crawler = (
+                onion.OnionCrawler(state=state, proxies=proxies, timeout=timeout)
+                if ".onion" in url
+                else page.PageCrawler(state=state, timeout=timeout)
+            )
 
             crawler.crawl_page(threading.current_thread().name, url)
 
-        else:
-            logger.info(f"URL {url} has already been crawled.")
+            state.crawl_queue.task_done()
 
-        state.crawl_queue.task_done()
-
-
-
-
-#def assign_jobs(state: state.CrawlerState):
-    for link in state.crawl_queue.queue:
-        logger.info('Assigning job for link: %s', link)
-        state.crawl_queue.put(link)
-    state.crawl_queue.join()
-    start_crawling()
-
-
-#def start_crawling(state: state.CrawlerState):
-    logger.debug("CRAWLING STARTED")
-
-    if state.crawl_queue.qsize():
-        logger.debug("QUEUED LINKS FOUND")
-        #logger.info(f"{len(state.crawl_queue.qsize())} links in the queue")
-        assign_jobs(state)
+    except Empty:
+        logger.info(f"List of queue is empty, terminating the program.")
 
 
 if __name__ == "__main__":
-    main()
+    main(config_file_path="./config.yaml")

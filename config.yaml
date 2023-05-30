@@ -1,0 +1,18 @@
+---
+project:
+  name: "hiddenwiki"
+  directory: "/home/user/Desktop/dwc"
+
+base_urls:
+  - "link1"
+  - "link2"
+
+
+num_worker_threads: 1
+
+request:
+  timeout: 30
+
+proxies:
+  http: "socks5h://127.0.0.1:9050"
+  https: "socks5h://127.0.0.1:9050"

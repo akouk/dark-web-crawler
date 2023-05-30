@@ -1,7 +1,9 @@
 import os
 import sys
 import threading
+
 from queue import Queue
+from typing import Set, List
 
 from utils.log_config import logger
 
@@ -9,7 +11,7 @@ file_write_lock = threading.Lock()
 
 
 class CrawlerState:
-    def __init__(self, project_name, project_directory, base_urls):
+    def __init__(self, project_name: str, project_directory: str, base_urls: List[str]):
         self.project_name = project_name
         self.project_directory = project_directory
         self.base_urls = base_urls
@@ -17,7 +19,7 @@ class CrawlerState:
         self.crawl_queue = Queue()
         self.initialize_crawler()
 
-    def initialize_crawler(self):
+    def initialize_crawler(self) -> None:
         if not os.path.exists(self.project_directory):
             logger.info('Invalid project directory: %s.', self.project_directory)
             sys.exit("Terminating the program.")
@@ -33,7 +35,7 @@ class CrawlerState:
         for url in self.base_urls:
             self.crawl_queue.put(url)
     
-    def add_links_to_queue(self, links):
+    def add_links_to_queue(self, links: List[str]) -> None:
         for link in links:
             if link in self.crawl_queue.queue or link in self.crawled_domains:
                 continue

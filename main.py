@@ -1,92 +1,96 @@
 import threading
-from queue import Queue
-from OnionCrawler import OnionCrawler
-from PageCrawler import PageCrawler
-from CrawlerState import CrawlerState
-from file_manager import *
-from config_reader import *
-from config_parser import *
-from log_config import logger
-
-config_file_path = 'config.yaml'
-config = read_config_file(config_file_path)
-(
-    project_directory,
-    project_name,
-    results_name,
-    base_urls,
-    urls_to_crawl_file,
-    crawled_urls_file,
-    num_worker_threads,
-    proxies
-) = get_config_values(config)
-
-#check_project_directory(project_directory, project_name, urls_to_crawl_file, crawled_urls_file, base_urls)
-project_path = create_project_directory(project_directory, project_name)
-if project_path:
-    create_results_data_directory(project_path, results_name)
-    create_txt_files(project_path, urls_to_crawl_file, crawled_urls_file)
-    write_urls_to_file(base_urls, os.path.join(project_path, urls_to_crawl_file))
+from queue import Empty
+from typing import Dict, List
 
 
-# Convert base_urls to a queue
-url_queue = convert_urls_to_queue_from_config(base_urls)
-logger.info('Base urls: %s', url_queue.queue)
+from configs import reader
+from utils.log_config import logger
+from crawlers import state, page, onion
 
 
+def main():
+    config_file_path = './configs/config.yaml'
+    config = reader.read_config_file(config_file_path)
+    (
+        project_directory,
+        project_name,
+        base_urls,
+        num_worker_threads,
+        proxies
+    ) = reader.get_config_values(config)
 
-state = CrawlerState(project_name, base_urls)
-PageCrawler(state)
+    # Yaml links
+    state_crawlers = state.CrawlerState(
+        project_name, project_directory, base_urls)
+    logger.info('Base urls: %s', state_crawlers.crawl_queue.queue)
+
+    create_crawler_threads(num_worker_threads, state_crawlers, proxies)
+    #start_crawling(state_crawlers)
 
 
-# Create worker threads (will die when main exits)
-def create_crawler_threads():
+def create_crawler_threads(num_worker_threads, state, proxies):
     logger.debug("CREATING CRAWLER THREADS")
+    active_threads: List[threading.Thread] = []
     for _ in range(num_worker_threads):
-        t = threading.Thread(target=crawl_worker)
-        t.daemon = True
-        t.start()
+        thread = threading.Thread(target=crawl_worker, args=(state, proxies))
+        thread.start()
+        active_threads.append(thread)
+    for thread in active_threads:
+        thread.join()
     logger.debug("CRAWLER THREADS CREATED")
 
 
-def crawl_worker():
+
+def crawl_worker(state: state.CrawlerState, proxies: Dict[str, str]):
+    logger.info('STRATING CRAWL WORKER')
+
     while True:
-        url = url_queue.get()
-        logger.info("Processing URL %s:", url)
+        logger.info('INSIDE WHILE TRUE')
+        url = state.crawl_queue.get(block=False)
 
-        if ".onion" in url:
-            logger.debug("ONION LINK FOUND")
-            logger.info("Creating OnionCrawler")
-            crawler = OnionCrawler(state, proxies=proxies)
+        logger.info(f'URL GET FROM QUEUE {url}')
+        logger.info(f'Active entries in queue: {state.crawl_queue.queue}')
+
+        # Check if the URL has been crawled
+        if url not in state.crawled_domains:
+            logger.info(f'URL {url} NOT IN CRAWLED')
+
+            if ".onion" in url:
+                logger.debug("ONION LINK FOUND")
+                logger.info("Creating OnionCrawler")
+                crawler = onion.OnionCrawler(state, proxies=proxies)
+
+            else:
+                logger.debug("REGULAR LINK FOUND")
+                logger.info("Creating PageCrawler")
+                crawler = page.PageCrawler(state)
+
+            crawler.crawl_page(threading.current_thread().name, url)
+
         else:
-            logger.debug("REGULAR LINK FOUND")
-            logger.info("Creating PageCrawler")
-            crawler = PageCrawler(state)
+            logger.info(f"URL {url} has already been crawled.")
 
-        crawler.crawl_page(threading.current_thread().name, url)
-        url_queue.task_done()
+        state.crawl_queue.task_done()
 
-        # Check if the file is empty and remove if necessary
-        remove_empty_urls_file(os.path.join(project_path, urls_to_crawl_file))
 
-   
-def assign_jobs():
-    for link in file_to_queue(urls_to_crawl_file).queue:
-        url_queue.put(link)
-    url_queue.join()
+
+
+#def assign_jobs(state: state.CrawlerState):
+    for link in state.crawl_queue.queue:
+        logger.info('Assigning job for link: %s', link)
+        state.crawl_queue.put(link)
+    state.crawl_queue.join()
     start_crawling()
 
 
-def start_crawling():
+#def start_crawling(state: state.CrawlerState):
     logger.debug("CRAWLING STARTED")
 
-    queued_links = file_to_queue(urls_to_crawl_file).queue
-
-    if queued_links:
+    if state.crawl_queue.qsize():
         logger.debug("QUEUED LINKS FOUND")
-        logger.info(f"{len(queued_links)} links in the queue")
-        assign_jobs()
+        #logger.info(f"{len(state.crawl_queue.qsize())} links in the queue")
+        assign_jobs(state)
 
 
-create_crawler_threads()
-start_crawling()
+if __name__ == "__main__":
+    main()

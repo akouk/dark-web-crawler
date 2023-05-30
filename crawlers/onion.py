@@ -1,13 +1,14 @@
-from PageScrapper import PageScrapper
-import requests
 import chardet
-from file_manager import *
 import logging
-from BaseCrawler import BaseCrawler
-from log_config import logger
+import requests
+from typing import Dict
 
-class OnionCrawler(BaseCrawler):
-    def __init__(self, state, proxies):
+from crawlers import base, state
+from scrappers.page import PageScrapper
+
+
+class OnionCrawler(base.BaseCrawler):
+    def __init__(self, state: state.CrawlerState, proxies: Dict[str, str]):
         super().__init__(state)
         self.proxies = proxies
 
@@ -34,11 +35,14 @@ class OnionCrawler(BaseCrawler):
 
             # Extract onion links
             page_scrapper = PageScrapper(html_content)
-            return page_scrapper.find_onion_links()
+            domains = page_scrapper.find_onion_links()
+
+            return html_content, [f"http://{address}" for address in domains]
 
         except requests.exceptions.ConnectionError as e:
             logging.error(f"Connection error for {page_url}: {e}")
-            return None
+            return []
+
         except requests.exceptions.HTTPError as e:
             logging.error(f"HTTP error occurred: {e}")
-            return None
+            return []

@@ -2,10 +2,12 @@ import yaml
 import time
 import threading
 from queue import Empty
-from typing import Dict, List
+from typing import List, Dict
+
 
 from utils.log_config import logger
-from crawlers import state, page, onion
+from crawlers.state import CrawlerState
+from crawlers.crawler import Crawler
 from config_types import ConfigDict
 
 
@@ -13,12 +15,12 @@ def main(config_file_path: str) -> None:
     with open(config_file_path, "r") as file:
         config: ConfigDict = yaml.safe_load(file)
 
-    state_crawlers = state.CrawlerState(
+    state_crawlers = CrawlerState(
         project_name=config["project"]["name"],
         project_directory=config["project"]["directory"],
         base_urls=config["base_urls"],
     )
-    logger.info("Base urls: %s", state_crawlers.crawl_queue.queue)
+    logger.info(f"Base urls: {state_crawlers.crawl_queue.queue}")
 
     create_crawler_threads(
         num_worker_threads=config["num_worker_threads"],
@@ -28,8 +30,7 @@ def main(config_file_path: str) -> None:
     )
 
 
-def create_crawler_threads(num_worker_threads: int, state: state.CrawlerState, proxies: Dict[str, str], timeout: int) -> None:
-    logger.debug("CREATING CRAWLER THREADS")
+def create_crawler_threads(num_worker_threads: int, state: CrawlerState, proxies: Dict[str, str], timeout: int) -> None:
     active_threads: List[threading.Thread] = []
 
     for _ in range(num_worker_threads):
@@ -40,39 +41,34 @@ def create_crawler_threads(num_worker_threads: int, state: state.CrawlerState, p
     for thread in active_threads:
         thread.join()
 
-    logger.debug("CRAWLER THREADS CREATED")
-
-
-def crawl_worker(state: state.CrawlerState, proxies: Dict[str, str], timeout: int) -> None:
-    logger.info("STARTING CRAWL WORKER")
+def crawl_worker(state: CrawlerState, proxies: Dict[str, str], timeout: int) -> None:
     try:
         while True:
-            logger.info("INSIDE WHILE TRUE")
-            url = state.crawl_queue.get(block=False)
+            time.sleep(2)
+            url = state.crawl_queue.get(block=True, timeout=60) #block=True & timeout => multithread | Block=False => 1 thread crawls the pages
 
-            logger.info(f"URL GET FROM QUEUE {url}")
-            #logger.info(f"Active entries in queue: {state.crawl_queue.queue}")
+            #logger.debug(f"Url get from queue {url}")
 
             # Check if the URL has been crawled
             if url in state.crawled_domains:
-                logger.info(f"URL {url} has already been crawled.")
-                time.sleep(0.1)
+                logger.info(f"Onion address {url} has already been crawled")
                 continue
 
-            logger.info(f"Start the crawler for url {url}")
+            #logger.info(f"Starting the crawler(s). \n")
 
-            crawler = (
-                onion.OnionCrawler(state=state, proxies=proxies, timeout=timeout)
+            proxies_conf = (
+                proxies
                 if ".onion" in url
-                else page.PageCrawler(state=state, timeout=timeout)
+                else None
             )
+            crawler = Crawler(state, timeout, proxies_conf)
 
             crawler.crawl_page(threading.current_thread().name, url)
 
             state.crawl_queue.task_done()
 
     except Empty:
-        logger.info(f"List of queue is empty, terminating the program.")
+        logger.info(f"List of queue is empty, terminating the program")
 
 
 if __name__ == "__main__":

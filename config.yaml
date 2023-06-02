@@ -1,14 +1,25 @@
 ---
 project:
-  name: "hiddenwiki"
+  name: "DWC_Project1"
   directory: "/home/user/Desktop/dwc"
 
 base_urls:
-  - "link1"
-  - "link2"
+#  - "https://ahmia.fi/search/q=comic+book"
+#  - "https://onionengine.com/search.php?search=comic+book&submit=Search&rt="
+#  - "http://xmh57jrknzkhv6y3ls3ubitzfqnkrwxhopf5aygthi7d6rplyvk3noyd.onion/cgi-bin/omega/omega?P=comic+bok&DEFAULTOP=and&DB=default&FMT=query&xDB=default&xFILTERS=.%7E%7E&tkn=0782532f69f64ffc33d7006b9299267b%0D%0A" #Torch
+#  - "https://ahmia.fi/search/q=credit+card"
+#  - "https://ahmia.fi/search/q=index+of"
+#  - "https://ahmia.fi/search/?q=library"
 
+# Project1
+  - "https://thehiddenwiki.com/"
+  - "https://thehiddenwiki.org/"
+  - "https://torhiddenwiki.com/"
+  - "https://dark.fail/"
+  - "http://torlinksge6enmcyyuxjpjkoouw4oorgdgeo7ftnq3zodj7g2zxi3kyd.onion/" #Top Links
+  - "http://jaz45aabn5vkemy4jkg4mi4syheisqn2wn2n4fsuitpccdackjwxplad.onion/" #Onion Links
 
-num_worker_threads: 1
+num_worker_threads: 6
 
 request:
   timeout: 30

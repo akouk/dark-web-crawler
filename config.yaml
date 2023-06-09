@@ -1,13 +1,13 @@
 ---
 project:
-  name: "DWC_Project6"
-  directory: "/home/user/Desktop/dwc"
+  name: "name_of_the_project"
+  directory: "directory_of_the_project"
 
 base_urls:
-- "link1"
-- "link2"
+- "link_to_crawl1"
+- "link_to_crawl1"
 
-num_worker_threads: 1
+num_worker_threads: 4
 
 request:
   timeout: 60

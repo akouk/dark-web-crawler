@@ -21,7 +21,7 @@ Navigate to the cloned repository.
 
 ```cd <project_directory>```
 
-## Configuration
+### Configuration
 
 Before you can run the project, you need to configure it according to your needs.
 
@@ -33,7 +33,7 @@ You can modify the config.yaml file for your configuration. This YAML file is st
 - `request` : This section includes timeout in seconds for the requests.
 - `proxies`: Specify the proxies to be used for requests when crawling onion websites.
 
-## Setup and Running
+### Setup and Running
 
 After updating the config.yaml file, set up the virtual environment, install the required dependencies and run the project using the Makefile:
 
@@ -42,7 +42,8 @@ After updating the config.yaml file, set up the virtual environment, install the
 
 This will initiate the crawler, and you will see the crawled pages and other information on the console.
 
-To run the project, you can use the following command.
+To run the project, you can use the following command:
+
 ```make run```
 
 

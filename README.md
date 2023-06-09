@@ -6,9 +6,9 @@ Dark-Web-Crawler is a Python-based project that crawls and scrapes .onion websit
 
 ## Requirements
 Ensure you have installed the followings on your system:
-- Python 3.7 or newer
-- pip
-- venv
+- python3
+- python3-pip
+- python3-venv
 
 
 ## Getting Started
